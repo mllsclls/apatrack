@@ -89,17 +89,9 @@
   <h1>Àpatrack</h1>
   <p>Registra els teus àpats i sabrem què millorar.</p>
   <div class="card" style="text-align:left">
-    <div id="step-email">
-      <label for="email">Correu electrònic</label>
-      <input type="email" id="email" placeholder="tu@exemple.com" autocomplete="email" />
-      <button id="send-code" style="width:100%">Envia'm el codi</button>
-    </div>
-    <div id="step-code" class="hidden">
-      <label for="code">Codi rebut per correu</label>
-      <input type="text" id="code" inputmode="numeric" autocomplete="one-time-code" placeholder="123456" maxlength="6" />
-      <button id="verify-code" style="width:100%">Verifica i entra</button>
-      <button id="back-to-email" class="secondary" style="width:100%; margin-top:8px;">Torna a canviar el correu</button>
-    </div>
+    <label for="email">Correu electrònic</label>
+    <input type="email" id="email" placeholder="tu@exemple.com" autocomplete="email" />
+    <button id="send-link" style="width:100%">Envia'm l'enllaç d'accés</button>
     <div id="login-msg"></div>
   </div>
 </div>
@@ -177,50 +169,25 @@ function toLocalDatetimeInputValue(d) {
   return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-let pendingEmail = '';
-
-document.getElementById('send-code').addEventListener('click', async () => {
+document.getElementById('send-link').addEventListener('click', async () => {
   const email = document.getElementById('email').value.trim();
   if (!email) { loginMsg.textContent = 'Escriu un correu vàlid.'; return; }
   loginMsg.style.color = 'var(--muted)';
   loginMsg.textContent = 'Enviant...';
   const { error } = await sb.auth.signInWithOtp({
     email,
-    options: { shouldCreateUser: false }
+    options: {
+      shouldCreateUser: false,
+      emailRedirectTo: window.location.origin + window.location.pathname
+    }
   });
   if (error) {
     loginMsg.style.color = 'var(--danger)';
     loginMsg.textContent = 'Error: ' + error.message;
   } else {
-    pendingEmail = email;
     loginMsg.style.color = 'var(--accent)';
-    loginMsg.textContent = 'Revisa el teu correu i introdueix el codi.';
-    document.getElementById('step-email').classList.add('hidden');
-    document.getElementById('step-code').classList.remove('hidden');
+    loginMsg.textContent = 'Revisa el teu correu i clica l\'enllaç per entrar.';
   }
-});
-
-document.getElementById('verify-code').addEventListener('click', async () => {
-  const code = document.getElementById('code').value.trim();
-  if (!code) { loginMsg.textContent = 'Escriu el codi rebut.'; return; }
-  loginMsg.style.color = 'var(--muted)';
-  loginMsg.textContent = 'Verificant...';
-  const { error } = await sb.auth.verifyOtp({
-    email: pendingEmail,
-    token: code,
-    type: 'email'
-  });
-  if (error) {
-    loginMsg.style.color = 'var(--danger)';
-    loginMsg.textContent = 'Error: ' + error.message;
-  }
-  // Si funciona, onAuthStateChange ja s'encarrega de mostrar l'app.
-});
-
-document.getElementById('back-to-email').addEventListener('click', () => {
-  document.getElementById('step-code').classList.add('hidden');
-  document.getElementById('step-email').classList.remove('hidden');
-  loginMsg.textContent = '';
 });
 
 document.getElementById('logout-btn').addEventListener('click', async () => {
