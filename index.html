@@ -69,7 +69,13 @@
   .pill {
     font-size: 0.7rem; padding: 2px 8px; border-radius: 20px; white-space: nowrap;
   }
-  .pill.menjat, .pill.tipus { background: var(--accent-light); color: var(--accent); }
+  .pill.mt-esmorzar { background: #fef3c7; color: #92600e; }
+  .pill.mt-mig_mati { background: #ffe4d5; color: #9a4a1f; }
+  .pill.mt-dinar { background: #dcf5e3; color: #1f7a41; }
+  .pill.mt-berenar { background: #fde2e7; color: #a23b56; }
+  .pill.mt-sopar { background: #e0e7ff; color: #3b4bab; }
+  .pill.mt-altre { background: #ececec; color: #55565a; }
+  .nutri-info { font-size: 0.76rem; color: var(--muted); margin-top: 3px; }
   .del-btn { background: none; border: none; color: var(--muted); font-size: 0.9rem; padding: 2px 6px; }
   .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; }
   .stats-grid .stat { background: #fafaf7; border-radius: 10px; padding: 10px 4px; }
@@ -107,27 +113,39 @@
 
   <div class="card">
     <h2>Registra un àpat</h2>
+    <label for="meal-type">Tipus</label>
+    <select id="meal-type">
+      <option value="esmorzar">Esmorzar</option>
+      <option value="mig_mati">Mig matí</option>
+      <option value="dinar">Dinar</option>
+      <option value="berenar">Berenar</option>
+      <option value="sopar">Sopar</option>
+      <option value="altre">Altre</option>
+    </select>
     <div class="row">
       <div>
-        <label for="meal-type">Tipus</label>
-        <select id="meal-type">
-          <option value="esmorzar">Esmorzar</option>
-          <option value="mig_mati">Mig matí</option>
-          <option value="dinar">Dinar</option>
-          <option value="berenar">Berenar</option>
-          <option value="sopar">Sopar</option>
-          <option value="altre">Altre</option>
-        </select>
+        <label for="meal-date">Data</label>
+        <input type="date" id="meal-date" />
       </div>
       <div>
         <label for="meal-time">Hora</label>
-        <input type="datetime-local" id="meal-time" />
+        <input type="time" id="meal-time" />
       </div>
     </div>
     <label for="description">Què has menjat</label>
     <textarea id="description" placeholder="p. ex. amanida, arròs amb pollastre..."></textarea>
     <label for="notes">Notes (opcional)</label>
     <textarea id="notes" placeholder="gana, estat d'ànim, context..."></textarea>
+    <div class="row">
+      <div>
+        <label for="calories">Calories aprox. (opcional)</label>
+        <input type="number" id="calories" min="0" step="1" placeholder="p. ex. 450" />
+      </div>
+      <div>
+        <label for="nutrition">Puntuació nutricional 1-10 (opcional)</label>
+        <input type="number" id="nutrition" min="1" max="10" step="1" placeholder="p. ex. 7" />
+      </div>
+    </div>
     <button id="save-btn" style="width:100%">Desa el registre</button>
   </div>
 
@@ -164,9 +182,11 @@ const loginView = document.getElementById('login-view');
 const appView = document.getElementById('app-view');
 const loginMsg = document.getElementById('login-msg');
 
-function toLocalDatetimeInputValue(d) {
+function setMealFieldsToNow() {
+  const now = new Date();
   const pad = n => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  document.getElementById('meal-date').value = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+  document.getElementById('meal-time').value = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
 }
 
 document.getElementById('send-link').addEventListener('click', async () => {
@@ -198,17 +218,24 @@ document.getElementById('save-btn').addEventListener('click', async () => {
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return;
   const mealType = document.getElementById('meal-type').value;
+  const mealDateInput = document.getElementById('meal-date').value;
   const mealTimeInput = document.getElementById('meal-time').value;
   const description = document.getElementById('description').value.trim();
   const notes = document.getElementById('notes').value.trim();
-  const mealTime = mealTimeInput ? new Date(mealTimeInput).toISOString() : new Date().toISOString();
+  const caloriesInput = document.getElementById('calories').value;
+  const nutritionInput = document.getElementById('nutrition').value;
+  const mealTime = (mealDateInput && mealTimeInput)
+    ? new Date(`${mealDateInput}T${mealTimeInput}`).toISOString()
+    : new Date().toISOString();
 
   const { error } = await sb.from('meal_logs').insert({
     user_id: user.id,
     meal_time: mealTime,
     meal_type: mealType,
     description: description || null,
-    notes: notes || null
+    notes: notes || null,
+    calories_approx: caloriesInput ? parseInt(caloriesInput, 10) : null,
+    nutrition_score: nutritionInput ? parseInt(nutritionInput, 10) : null
   });
 
   if (error) {
@@ -217,7 +244,9 @@ document.getElementById('save-btn').addEventListener('click', async () => {
   }
   document.getElementById('description').value = '';
   document.getElementById('notes').value = '';
-  document.getElementById('meal-time').value = toLocalDatetimeInputValue(new Date());
+  document.getElementById('calories').value = '';
+  document.getElementById('nutrition').value = '';
+  setMealFieldsToNow();
   loadEntries();
   loadStats();
   loadFasting();
@@ -241,14 +270,19 @@ async function loadEntries() {
     const d = new Date(row.meal_time);
     const dateStr = d.toLocaleDateString('ca-ES', { day: '2-digit', month: '2-digit' });
     const timeStr = d.toLocaleTimeString('ca-ES', { hour: '2-digit', minute: '2-digit' });
+    const nutriParts = [];
+    if (row.calories_approx !== null && row.calories_approx !== undefined) nutriParts.push(`${row.calories_approx} kcal`);
+    if (row.nutrition_score !== null && row.nutrition_score !== undefined) nutriParts.push(`nutrició ${row.nutrition_score}/10`);
+    const nutriLine = nutriParts.length ? `<div class="nutri-info">${nutriParts.join(' · ')}</div>` : '';
     return `
       <div class="entry" data-id="${row.id}">
         <div>
           <div class="meta">${dateStr} · ${timeStr}</div>
           <div class="desc">${row.description ? escapeHtml(row.description) : '<em>(sense descripció)</em>'}</div>
+          ${nutriLine}
         </div>
         <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
-          <span class="pill tipus">${row.meal_type.replace('_',' ')}</span>
+          <span class="pill mt-${row.meal_type}">${row.meal_type.replace('_',' ')}</span>
           <button class="del-btn" onclick="deleteEntry('${row.id}')">Esborra</button>
         </div>
       </div>`;
@@ -394,7 +428,7 @@ async function showApp(user) {
   loginView.classList.add('hidden');
   appView.classList.remove('hidden');
   document.getElementById('user-email').textContent = user.email;
-  document.getElementById('meal-time').value = toLocalDatetimeInputValue(new Date());
+  setMealFieldsToNow();
   loadEntries();
   loadStats();
   loadFasting();
