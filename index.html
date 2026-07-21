@@ -52,12 +52,13 @@
   textarea { resize: vertical; min-height: 50px; }
   .row { display: flex; gap: 10px; }
   .row > div { flex: 1; }
-  .status-toggle { display: flex; gap: 8px; margin-bottom: 14px; }
-  .status-toggle button {
-    flex: 1; background: #fff; color: var(--ink); border: 1px solid var(--border);
-  }
-  .status-toggle button.active[data-val="menjat"] { background: var(--accent); color: #fff; border-color: var(--accent); }
-  .status-toggle button.active[data-val="saltat"] { background: var(--danger); color: #fff; border-color: var(--danger); }
+  .fasting-chart-svg { width: 100%; height: auto; display: block; }
+  .fasting-chart-svg .bar { fill: var(--accent); }
+  .fasting-chart-svg .bar.empty-bar { fill: var(--border); }
+  .fasting-chart-svg .axis-label { fill: var(--muted); font-size: 9px; font-family: inherit; }
+  .fasting-chart-svg .value-label { fill: var(--ink); font-size: 10px; font-family: inherit; font-weight: 600; }
+  .fasting-chart-svg .goal-line { stroke: var(--muted); stroke-dasharray: 3 3; stroke-width: 1; }
+  .fasting-chart-svg .goal-label { fill: var(--muted); font-size: 8px; font-family: inherit; }
   .entry {
     display: flex; justify-content: space-between; align-items: flex-start;
     padding: 10px 0; border-bottom: 1px solid var(--border); gap: 10px;
@@ -68,8 +69,7 @@
   .pill {
     font-size: 0.7rem; padding: 2px 8px; border-radius: 20px; white-space: nowrap;
   }
-  .pill.menjat { background: var(--accent-light); color: var(--accent); }
-  .pill.saltat { background: #f5e7e5; color: var(--danger); }
+  .pill.menjat, .pill.tipus { background: var(--accent-light); color: var(--accent); }
   .del-btn { background: none; border: none; color: var(--muted); font-size: 0.9rem; padding: 2px 6px; }
   .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; }
   .stats-grid .stat { background: #fafaf7; border-radius: 10px; padding: 10px 4px; }
@@ -107,10 +107,6 @@
 
   <div class="card">
     <h2>Registra un àpat</h2>
-    <div class="status-toggle">
-      <button type="button" data-val="menjat" class="active">Menjat</button>
-      <button type="button" data-val="saltat">Saltat</button>
-    </div>
     <div class="row">
       <div>
         <label for="meal-type">Tipus</label>
@@ -138,10 +134,15 @@
   <div class="card">
     <h2>Últims 7 dies</h2>
     <div class="stats-grid" id="stats-grid">
-      <div class="stat"><div class="n">–</div><div class="l">menjats</div></div>
-      <div class="stat"><div class="n">–</div><div class="l">saltats</div></div>
-      <div class="stat"><div class="n">–</div><div class="l">total</div></div>
+      <div class="stat"><div class="n">–</div><div class="l">àpats</div></div>
+      <div class="stat"><div class="n">–</div><div class="l">dies actius</div></div>
+      <div class="stat"><div class="n">–</div><div class="l">dejuni mitjà</div></div>
     </div>
+  </div>
+
+  <div class="card">
+    <h2>Dejuni: sopar → esmorzar</h2>
+    <div id="fasting-chart"><div class="empty">Carregant...</div></div>
   </div>
 
   <div class="card">
@@ -162,7 +163,6 @@ const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 const loginView = document.getElementById('login-view');
 const appView = document.getElementById('app-view');
 const loginMsg = document.getElementById('login-msg');
-let currentStatus = 'menjat';
 
 function toLocalDatetimeInputValue(d) {
   const pad = n => String(n).padStart(2, '0');
@@ -194,14 +194,6 @@ document.getElementById('logout-btn').addEventListener('click', async () => {
   await sb.auth.signOut();
 });
 
-document.querySelectorAll('.status-toggle button').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.status-toggle button').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    currentStatus = btn.dataset.val;
-  });
-});
-
 document.getElementById('save-btn').addEventListener('click', async () => {
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return;
@@ -215,7 +207,6 @@ document.getElementById('save-btn').addEventListener('click', async () => {
     user_id: user.id,
     meal_time: mealTime,
     meal_type: mealType,
-    status: currentStatus,
     description: description || null,
     notes: notes || null
   });
@@ -229,6 +220,7 @@ document.getElementById('save-btn').addEventListener('click', async () => {
   document.getElementById('meal-time').value = toLocalDatetimeInputValue(new Date());
   loadEntries();
   loadStats();
+  loadFasting();
 });
 
 async function loadEntries() {
@@ -252,11 +244,11 @@ async function loadEntries() {
     return `
       <div class="entry" data-id="${row.id}">
         <div>
-          <div class="meta">${dateStr} · ${timeStr} · ${row.meal_type.replace('_',' ')}</div>
+          <div class="meta">${dateStr} · ${timeStr}</div>
           <div class="desc">${row.description ? escapeHtml(row.description) : '<em>(sense descripció)</em>'}</div>
         </div>
         <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
-          <span class="pill ${row.status}">${row.status}</span>
+          <span class="pill tipus">${row.meal_type.replace('_',' ')}</span>
           <button class="del-btn" onclick="deleteEntry('${row.id}')">Esborra</button>
         </div>
       </div>`;
@@ -269,6 +261,7 @@ async function deleteEntry(id) {
   if (error) { alert('Error: ' + error.message); return; }
   loadEntries();
   loadStats();
+  loadFasting();
 }
 window.deleteEntry = deleteEntry;
 
@@ -287,13 +280,108 @@ async function loadStats() {
 
   const grid = document.getElementById('stats-grid');
   if (error || !data) { return; }
-  const menjats = data.reduce((s, r) => s + (r.apats_fets || 0), 0);
-  const saltats = data.reduce((s, r) => s + (r.apats_saltats || 0), 0);
-  const total = data.reduce((s, r) => s + (r.total_registres || 0), 0);
+  const totalApats = data.reduce((s, r) => s + (r.total_apats || 0), 0);
+  const diesActius = data.length;
+
+  const { data: fastData } = await sb
+    .from('fasting_windows')
+    .select('fasting_hours')
+    .eq('user_id', user.id)
+    .gte('sopar_day', sinceStr);
+
+  let mitjana = '–';
+  if (fastData && fastData.length) {
+    const avg = fastData.reduce((s, r) => s + Number(r.fasting_hours), 0) / fastData.length;
+    mitjana = avg.toFixed(1) + 'h';
+  }
+
   grid.innerHTML = `
-    <div class="stat"><div class="n">${menjats}</div><div class="l">menjats</div></div>
-    <div class="stat"><div class="n">${saltats}</div><div class="l">saltats</div></div>
-    <div class="stat"><div class="n">${total}</div><div class="l">total</div></div>`;
+    <div class="stat"><div class="n">${totalApats}</div><div class="l">àpats</div></div>
+    <div class="stat"><div class="n">${diesActius}</div><div class="l">dies actius</div></div>
+    <div class="stat"><div class="n">${mitjana}</div><div class="l">dejuni mitjà</div></div>`;
+}
+
+async function loadFasting() {
+  const container = document.getElementById('fasting-chart');
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user) return;
+
+  const days = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    days.push(d.toISOString().slice(0, 10));
+  }
+  const sinceStr = days[0];
+
+  const { data, error } = await sb
+    .from('fasting_windows')
+    .select('sopar_day, fasting_hours')
+    .eq('user_id', user.id)
+    .gte('sopar_day', sinceStr)
+    .order('sopar_day', { ascending: true });
+
+  if (error) { container.innerHTML = `<div class="empty">Error: ${error.message}</div>`; return; }
+
+  // Si un dia té més d'un registre de dejuni, ens quedem amb la mitjana
+  const byDay = {};
+  (data || []).forEach(r => {
+    const key = r.sopar_day;
+    if (!byDay[key]) byDay[key] = [];
+    byDay[key].push(Number(r.fasting_hours));
+  });
+
+  const values = days.map(day => {
+    const arr = byDay[day];
+    if (!arr || !arr.length) return null;
+    return arr.reduce((a, b) => a + b, 0) / arr.length;
+  });
+
+  if (values.every(v => v === null)) {
+    container.innerHTML = '<div class="empty">Encara no hi ha prou dades (calen un sopar i un esmorzar registrats seguits).</div>';
+    return;
+  }
+
+  container.innerHTML = renderFastingChart(days, values);
+}
+
+function renderFastingChart(days, values) {
+  const w = 320, h = 130;
+  const padLeft = 4, padRight = 4, padTop = 18, padBottom = 18;
+  const chartW = w - padLeft - padRight;
+  const chartH = h - padTop - padBottom;
+  const n = days.length;
+  const gap = 8;
+  const barW = (chartW - gap * (n - 1)) / n;
+  const maxVal = Math.max(16, ...values.filter(v => v !== null));
+  const goalHours = 12;
+
+  const goalY = padTop + chartH - (goalHours / maxVal) * chartH;
+
+  let bars = '';
+  days.forEach((day, i) => {
+    const v = values[i];
+    const x = padLeft + i * (barW + gap);
+    const label = new Date(day + 'T12:00:00').toLocaleDateString('ca-ES', { weekday: 'short' }).replace('.', '');
+    if (v === null) {
+      const barH = 4;
+      const y = padTop + chartH - barH;
+      bars += `<rect class="bar empty-bar" x="${x}" y="${y}" width="${barW}" height="${barH}" rx="3"></rect>`;
+    } else {
+      const barH = Math.max(3, (v / maxVal) * chartH);
+      const y = padTop + chartH - barH;
+      bars += `<rect class="bar" x="${x}" y="${y}" width="${barW}" height="${barH}" rx="3"></rect>`;
+      bars += `<text class="value-label" x="${x + barW / 2}" y="${y - 4}" text-anchor="middle">${v.toFixed(1)}</text>`;
+    }
+    bars += `<text class="axis-label" x="${x + barW / 2}" y="${h - 2}" text-anchor="middle">${label}</text>`;
+  });
+
+  return `
+    <svg class="fasting-chart-svg" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
+      <line class="goal-line" x1="${padLeft}" y1="${goalY}" x2="${w - padRight}" y2="${goalY}"></line>
+      <text class="goal-label" x="${w - padRight}" y="${goalY - 3}" text-anchor="end">objectiu 12h</text>
+      ${bars}
+    </svg>`;
 }
 
 function escapeHtml(str) {
@@ -309,6 +397,7 @@ async function showApp(user) {
   document.getElementById('meal-time').value = toLocalDatetimeInputValue(new Date());
   loadEntries();
   loadStats();
+  loadFasting();
 }
 
 function showLogin() {
