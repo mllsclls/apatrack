@@ -178,8 +178,16 @@
 
   <div class="card">
     <h2 id="form-card-title">Registra un àpat</h2>
-    <input type="file" id="photo-input" accept="image/*" capture="environment" class="hidden" />
-    <button type="button" class="secondary" id="photo-btn" style="width:100%; margin-bottom:6px;">📷 Fer foto i completar amb IA</button>
+    <input type="file" id="photo-input-camera" accept="image/*" capture="environment" class="hidden" />
+    <input type="file" id="photo-input-gallery" accept="image/*" class="hidden" />
+    <div class="row" style="margin-bottom:6px;">
+      <div>
+        <button type="button" class="secondary" id="photo-camera-btn" style="width:100%;">📷 Fer una foto</button>
+      </div>
+      <div>
+        <button type="button" class="secondary" id="photo-gallery-btn" style="width:100%;">🖼️ Puja una imatge</button>
+      </div>
+    </div>
     <div id="photo-status" style="font-size:0.8rem; min-height:1.2em; margin-bottom:14px;"></div>
     <label for="meal-type">Tipus</label>
     <select id="meal-type">
@@ -398,12 +406,14 @@ function fileToBase64(file) {
   });
 }
 
-document.getElementById('photo-btn').addEventListener('click', () => {
-  document.getElementById('photo-input').click();
+document.getElementById('photo-camera-btn').addEventListener('click', () => {
+  document.getElementById('photo-input-camera').click();
+});
+document.getElementById('photo-gallery-btn').addEventListener('click', () => {
+  document.getElementById('photo-input-gallery').click();
 });
 
-document.getElementById('photo-input').addEventListener('change', async (e) => {
-  const file = e.target.files[0];
+async function handlePhotoFile(file) {
   if (!file) return;
   const statusEl = document.getElementById('photo-status');
   statusEl.style.color = 'var(--muted)';
@@ -411,14 +421,25 @@ document.getElementById('photo-input').addEventListener('change', async (e) => {
 
   try {
     const base64 = await fileToBase64(file);
-    const { data, error } = await sb.functions.invoke('analyze-meal-photo', {
-      body: { image: base64, mimeType: file.type || 'image/jpeg' }
+    const { data: sessionData } = await sb.auth.getSession();
+    const accessToken = sessionData?.session?.access_token;
+
+    const resp = await fetch(`${SUPABASE_URL}/functions/v1/analyze-meal-photo`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+        'apikey': SUPABASE_ANON_KEY
+      },
+      body: JSON.stringify({ image: base64, mimeType: file.type || 'image/jpeg' })
     });
 
-    if (error) throw error;
-    if (data && data.error) {
+    const data = await resp.json();
+
+    if (!resp.ok || data.error) {
       statusEl.style.color = 'var(--danger)';
-      statusEl.textContent = data.message || 'Error analitzant la foto.';
+      statusEl.textContent = data.message || `Error (${resp.status}) analitzant la foto.`;
+      console.error('analyze-meal-photo error:', data);
       return;
     }
 
@@ -437,9 +458,17 @@ document.getElementById('photo-input').addEventListener('change', async (e) => {
   } catch (err) {
     statusEl.style.color = 'var(--danger)';
     statusEl.textContent = 'Error: ' + (err.message || err);
-  } finally {
-    document.getElementById('photo-input').value = '';
+    console.error('Unexpected error analyzing photo:', err);
   }
+}
+
+document.getElementById('photo-input-camera').addEventListener('change', (e) => {
+  handlePhotoFile(e.target.files[0]);
+  e.target.value = '';
+});
+document.getElementById('photo-input-gallery').addEventListener('change', (e) => {
+  handlePhotoFile(e.target.files[0]);
+  e.target.value = '';
 });
 
 document.getElementById('settings-btn').addEventListener('click', async () => {
