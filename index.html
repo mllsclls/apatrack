@@ -326,6 +326,7 @@ if (typeof supabase === 'undefined') {
 }
 
 const { createClient } = supabase;
+console.log('Àpatrack script carregat — versió debug-2026-07-22-a');
 const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
 });
@@ -355,7 +356,9 @@ function setWeightFieldsToNow() {
 }
 
 document.getElementById('send-link').addEventListener('click', async () => {
+  console.log('Botó "Envia\'m l\'enllaç" clicat');
   const email = document.getElementById('email').value.trim();
+  console.log('Correu llegit:', email);
   if (!email) { loginMsg.textContent = 'Escriu un correu vàlid.'; return; }
   loginMsg.style.color = 'var(--muted)';
   loginMsg.textContent = 'Enviant...';
