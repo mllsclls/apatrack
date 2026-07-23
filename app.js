@@ -168,6 +168,7 @@ async function loadProfileIntoForm() {
   document.getElementById('gender').value = data?.gender || '';
   document.getElementById('height-cm').value = data?.height_cm ?? '';
   document.getElementById('weight-kg').value = data?.weight_kg ?? '';
+  document.getElementById('fasting-goal').value = data?.fasting_goal_hours ?? 12;
   document.getElementById('gemini-key').value = data?.gemini_api_key || '';
   document.getElementById('profile-language').value = data?.language || 'ca';
   currentLang = data?.language || 'ca';
@@ -182,6 +183,7 @@ document.getElementById('save-profile-btn').addEventListener('click', async () =
   msg.textContent = t('savingText');
 
   const selectedLang = document.getElementById('profile-language').value || 'ca';
+  const fastingGoalInput = document.getElementById('fasting-goal').value;
 
   const payload = {
     user_id: user.id,
@@ -190,6 +192,7 @@ document.getElementById('save-profile-btn').addEventListener('click', async () =
     gender: document.getElementById('gender').value || null,
     height_cm: document.getElementById('height-cm').value ? parseFloat(document.getElementById('height-cm').value) : null,
     weight_kg: document.getElementById('weight-kg').value ? parseFloat(document.getElementById('weight-kg').value) : null,
+    fasting_goal_hours: fastingGoalInput ? parseFloat(fastingGoalInput) : 12,
     gemini_api_key: document.getElementById('gemini-key').value.trim() || null,
     language: selectedLang,
     updated_at: new Date().toISOString()
@@ -202,6 +205,8 @@ document.getElementById('save-profile-btn').addEventListener('click', async () =
   } else {
     currentLang = selectedLang;
     applyTranslations();
+    loadFasting();
+    document.getElementById('user-email').textContent = payload.display_name || user.email;
     msg.style.color = 'var(--accent)';
     msg.textContent = t('profileSaved');
   }
@@ -654,14 +659,14 @@ async function loadFasting() {
   }
   const sinceStr = days[0];
 
-  const { data, error } = await sb
-    .from('fasting_windows')
-    .select('sopar_day, fasting_hours')
-    .eq('user_id', user.id)
-    .gte('sopar_day', sinceStr)
-    .order('sopar_day', { ascending: true });
+  const [{ data, error }, { data: profileData }] = await Promise.all([
+    sb.from('fasting_windows').select('sopar_day, fasting_hours').eq('user_id', user.id).gte('sopar_day', sinceStr).order('sopar_day', { ascending: true }),
+    sb.from('user_profiles').select('fasting_goal_hours').eq('user_id', user.id).maybeSingle()
+  ]);
 
   if (error) { container.innerHTML = `<div class="empty">Error: ${error.message}</div>`; return; }
+
+  const goalHours = Number(profileData?.fasting_goal_hours) || 12;
 
   // Si un dia té més d'un registre de dejuni, ens quedem amb la mitjana
   const byDay = {};
@@ -682,10 +687,10 @@ async function loadFasting() {
     return;
   }
 
-  container.innerHTML = renderFastingChart(days, values);
+  container.innerHTML = renderFastingChart(days, values, goalHours);
 }
 
-function renderFastingChart(days, values) {
+function renderFastingChart(days, values, goalHours) {
   const w = 320, h = 130;
   const padLeft = 4, padRight = 4, padTop = 18, padBottom = 18;
   const chartW = w - padLeft - padRight;
@@ -693,8 +698,7 @@ function renderFastingChart(days, values) {
   const n = days.length;
   const gap = 8;
   const barW = (chartW - gap * (n - 1)) / n;
-  const maxVal = Math.max(16, ...values.filter(v => v !== null));
-  const goalHours = 12;
+  const maxVal = Math.max(goalHours + 4, 16, ...values.filter(v => v !== null));
 
   const goalY = padTop + chartH - (goalHours / maxVal) * chartH;
 
@@ -716,10 +720,12 @@ function renderFastingChart(days, values) {
     bars += `<text class="axis-label" x="${x + barW / 2}" y="${h - 2}" text-anchor="middle">${label}</text>`;
   });
 
+  const goalLabel = `${t('fastingGoalChartPrefix')} ${goalHours}h`;
+
   return `
     <svg class="fasting-chart-svg" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
       <line class="goal-line" x1="${padLeft}" y1="${goalY}" x2="${w - padRight}" y2="${goalY}"></line>
-      <text class="goal-label" x="${w - padRight}" y="${goalY - 3}" text-anchor="end">${t('fastingGoal')}</text>
+      <text class="goal-label" x="${w - padRight}" y="${goalY - 3}" text-anchor="end">${goalLabel}</text>
       ${bars}
     </svg>`;
 }
@@ -735,8 +741,9 @@ async function showApp(user) {
   appView.classList.remove('hidden');
   document.getElementById('user-email').textContent = user.email;
 
-  const { data: profileLang } = await sb.from('user_profiles').select('language').eq('user_id', user.id).maybeSingle();
-  currentLang = profileLang?.language || 'ca';
+  const { data: profileData } = await sb.from('user_profiles').select('language, display_name').eq('user_id', user.id).maybeSingle();
+  currentLang = profileData?.language || 'ca';
+  document.getElementById('user-email').textContent = profileData?.display_name || user.email;
   applyTranslations();
 
   setMealFieldsToNow();
