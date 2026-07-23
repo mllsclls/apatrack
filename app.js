@@ -1,4 +1,3 @@
-
 const SUPABASE_URL = 'https://nrhlfdcorynntnizymdk.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5yaGxmZGNvcnlubnRuaXp5bWRrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ1MzkyODIsImV4cCI6MjEwMDExNTI4Mn0.M8gOiLtvSeDIrWkcq32W0E675STIMJKtWxr7zMvU6HQ';
 
@@ -222,12 +221,36 @@ function resetForm() {
   document.getElementById('form-card-title').textContent = t('mealFormTitle');
 }
 
+function setFormOpen(which) {
+  const mealCard = document.getElementById('meal-form-card');
+  const weightCard = document.getElementById('weight-form-card');
+  const mealBtn = document.getElementById('toggle-meal-form-btn');
+  const weightBtn = document.getElementById('toggle-weight-form-btn');
+
+  mealCard.classList.toggle('hidden', which !== 'meal');
+  weightCard.classList.toggle('hidden', which !== 'weight');
+  mealBtn.classList.toggle('open', which === 'meal');
+  weightBtn.classList.toggle('open', which === 'weight');
+  refreshToggleButtonLabels();
+}
+
+function refreshToggleButtonLabels() {
+  const mealOpen = document.getElementById('toggle-meal-form-btn').classList.contains('open');
+  const weightOpen = document.getElementById('toggle-weight-form-btn').classList.contains('open');
+  document.getElementById('toggle-meal-form-btn').textContent = (mealOpen ? '▾ ' : '▸ ') + t('quickAddMeal');
+  document.getElementById('toggle-weight-form-btn').textContent = (weightOpen ? '▾ ' : '▸ ') + t('quickAddWeight');
+}
+
 document.getElementById('toggle-meal-form-btn').addEventListener('click', () => {
-  document.getElementById('meal-form-card').classList.toggle('hidden');
+  const isOpen = document.getElementById('toggle-meal-form-btn').classList.contains('open');
+  setFormOpen(isOpen ? 'none' : 'meal');
 });
 document.getElementById('toggle-weight-form-btn').addEventListener('click', () => {
-  document.getElementById('weight-form-card').classList.toggle('hidden');
+  const isOpen = document.getElementById('toggle-weight-form-btn').classList.contains('open');
+  setFormOpen(isOpen ? 'none' : 'weight');
 });
+
+setFormOpen('none');
 
 document.getElementById('cancel-edit-btn').addEventListener('click', resetForm);
 
@@ -415,7 +438,7 @@ async function editEntry(id) {
   document.getElementById('nutrition').value = row.nutrition_score ?? '';
   aiGeneratedFlag = !!row.ai_generated;
   editingId = id;
-  document.getElementById('meal-form-card').classList.remove('hidden');
+  setFormOpen('meal');
   document.getElementById('save-btn').textContent = t('updateMealBtn');
   document.getElementById('cancel-edit-btn').classList.remove('hidden');
   document.getElementById('form-card-title').textContent = t('mealFormTitleEdit');
@@ -502,7 +525,7 @@ async function editWeight(id) {
   document.getElementById('weight-basal').value = row.basal_metabolism_kcal ?? '';
   document.getElementById('weight-extra-fields').classList.remove('hidden');
   editingWeightId = id;
-  document.getElementById('weight-form-card').classList.remove('hidden');
+  setFormOpen('weight');
   document.getElementById('save-weight-btn').textContent = t('updateWeightBtn');
   document.getElementById('cancel-weight-edit-btn').classList.remove('hidden');
   document.getElementById('weight-form-title').textContent = t('weightFormTitleEdit');
