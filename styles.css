@@ -93,12 +93,13 @@
   .pill.mt-altre { background: #ececec; color: #55565a; }
   .toggle-btn {
     width: 100%; text-align: left; font-weight: 600;
-    padding: 14px 16px; border-radius: var(--radius); margin-bottom: 16px;
+    padding: 14px 16px; border-radius: var(--radius); margin-bottom: 8px;
   }
-  .toggle-btn.open { border-radius: var(--radius) var(--radius) 0 0; margin-bottom: 0; }
   .toggle-btn.meal-toggle { background: var(--accent); color: #fff; }
   .toggle-btn.weight-toggle { background: var(--weight); color: #fff; }
-  .card.attached { margin-top: 0; border-top: none; border-radius: 0 0 var(--radius) var(--radius); }
+  .card.attached { margin-top: 0; border-top-width: 4px; border-top-style: solid; }
+  #meal-form-card.attached { border-top-color: var(--accent); }
+  #weight-form-card.attached { border-top-color: var(--weight); }
   .nutri-info { font-size: 0.76rem; color: var(--muted); margin-top: 3px; }
   .del-btn { background: none; border: none; color: var(--muted); font-size: 0.9rem; padding: 2px 6px; }
   .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; }
