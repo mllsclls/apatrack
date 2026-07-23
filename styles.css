@@ -74,7 +74,9 @@
   .entry-date { font-size: 0.76rem; color: var(--muted); font-weight: 600; white-space: nowrap; }
   .entry-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex-shrink: 0; }
   .entry .desc { font-size: 0.92rem; margin-top: 2px; }
-  .weight-main { font-size: 1.05rem; font-weight: 700; color: var(--ink); }
+  .weight-main { font-size: 1.05rem; font-weight: 700; color: var(--weight); }
+  .btn-weight { background: var(--weight); }
+  .btn-weight:hover { opacity: 0.9; }
   .weight-extra { font-size: 0.74rem; color: var(--muted); margin-top: 3px; }
   .pill-weight { background: #d6f0f0; color: #0f7a7a; }
   #timeline-more-wrap { text-align: center; margin-top: 12px; }
