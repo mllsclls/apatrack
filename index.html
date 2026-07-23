@@ -33,11 +33,6 @@
     </div>
   </header>
 
-  <div class="quick-actions">
-    <button id="toggle-meal-form-btn" data-i18n="quickAddMeal">+ Registrar àpat</button>
-    <button class="secondary" id="toggle-weight-form-btn" data-i18n="quickAddWeight">+ Registrar pes</button>
-  </div>
-
   <div class="card hidden" id="settings-card">
     <h2 data-i18n="profileTitle">El teu perfil</h2>
     <label for="display-name" data-i18n="nameLabel">Nom</label>
@@ -81,7 +76,8 @@
     <div id="profile-msg" style="margin-top:10px; font-size:0.85rem;"></div>
   </div>
 
-  <div class="card hidden" id="meal-form-card">
+  <button id="toggle-meal-form-btn" class="toggle-btn meal-toggle">+ Registrar àpat</button>
+  <div class="card hidden attached" id="meal-form-card">
     <h2 id="form-card-title" data-i18n="mealFormTitle">Registra un àpat</h2>
     <input type="file" id="photo-input-camera" accept="image/*" capture="environment" class="hidden" />
     <input type="file" id="photo-input-gallery" accept="image/*" class="hidden" />
@@ -131,7 +127,8 @@
     <button id="cancel-edit-btn" class="secondary hidden" style="width:100%; margin-top:8px;" data-i18n="cancelEditBtn">Cancel·la edició</button>
   </div>
 
-  <div class="card hidden" id="weight-form-card">
+  <button id="toggle-weight-form-btn" class="toggle-btn weight-toggle">+ Registrar pes</button>
+  <div class="card hidden attached" id="weight-form-card">
     <h2 id="weight-form-title" data-i18n="weightFormTitle">Registra un pes</h2>
     <div class="row">
       <div>
