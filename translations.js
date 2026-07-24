@@ -98,6 +98,10 @@ const I18N = {
     invalidEmail: 'Escriu un correu vàlid.',
     analyzingPhoto: 'Analitzant la foto amb IA...',
     photoFilled: "Camps omplerts amb IA. Revisa'ls abans de desar.",
+    mealSavedMsg: '✅ Àpat registrat',
+    mealUpdatedMsg: '✅ Àpat actualitzat',
+    weightSavedMsg: '✅ Pes registrat',
+    weightUpdatedMsg: '✅ Pes actualitzat',
   }
 };
 
