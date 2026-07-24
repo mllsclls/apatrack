@@ -257,6 +257,21 @@ document.getElementById('toggle-weight-form-btn').addEventListener('click', () =
 
 setFormOpen('none');
 
+let toastTimer = null;
+function showToast(message) {
+  let toast = document.getElementById('app-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'app-toast';
+    toast.className = 'toast';
+    document.body.appendChild(toast);
+  }
+  toast.textContent = message;
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { toast.classList.remove('show'); }, 2500);
+}
+
 document.getElementById('cancel-edit-btn').addEventListener('click', resetForm);
 
 document.getElementById('save-btn').addEventListener('click', async () => {
@@ -294,7 +309,9 @@ document.getElementById('save-btn').addEventListener('click', async () => {
     alert('Error desant: ' + error.message);
     return;
   }
+  showToast(editingId ? t('mealUpdatedMsg') : t('mealSavedMsg'));
   resetForm();
+  setFormOpen('none');
   loadTimeline();
   loadStats();
   loadFasting();
@@ -508,7 +525,9 @@ document.getElementById('save-weight-btn').addEventListener('click', async () =>
 
   if (error) { alert('Error desant: ' + error.message); return; }
 
+  showToast(editingWeightId ? t('weightUpdatedMsg') : t('weightSavedMsg'));
   resetWeightForm();
+  setFormOpen('none');
   loadTimeline();
   loadWeightChart();
 });
