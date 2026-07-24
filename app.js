@@ -258,6 +258,25 @@ document.getElementById('toggle-weight-form-btn').addEventListener('click', () =
 setFormOpen('none');
 
 let toastTimer = null;
+let lastMealTime = null;
+
+function renderSinceLastMeal() {
+  const el = document.getElementById('since-last-meal');
+  if (!el) return;
+  if (!lastMealTime) {
+    el.classList.add('hidden');
+    return;
+  }
+  el.classList.remove('hidden');
+  const diffMs = Date.now() - new Date(lastMealTime).getTime();
+  const totalMinutes = Math.max(0, Math.floor(diffMs / 60000));
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  el.textContent = `${h}h ${m}min ${t('sinceLastMealLabel')}`;
+}
+
+setInterval(renderSinceLastMeal, 60000);
+
 function showToast(message) {
   let toast = document.getElementById('app-toast');
   if (!toast) {
@@ -678,12 +697,16 @@ async function loadFasting() {
   }
   const sinceStr = days[0];
 
-  const [{ data, error }, { data: profileData }] = await Promise.all([
+  const [{ data, error }, { data: profileData }, { data: lastMeal }] = await Promise.all([
     sb.from('fasting_windows').select('sopar_day, fasting_hours').eq('user_id', user.id).gte('sopar_day', sinceStr).order('sopar_day', { ascending: true }),
-    sb.from('user_profiles').select('fasting_goal_hours').eq('user_id', user.id).maybeSingle()
+    sb.from('user_profiles').select('fasting_goal_hours').eq('user_id', user.id).maybeSingle(),
+    sb.from('meal_logs').select('meal_time').eq('user_id', user.id).order('meal_time', { ascending: false }).limit(1).maybeSingle()
   ]);
 
   if (error) { container.innerHTML = `<div class="empty">Error: ${error.message}</div>`; return; }
+
+  lastMealTime = lastMeal?.meal_time || null;
+  renderSinceLastMeal();
 
   const goalHours = Number(profileData?.fasting_goal_hours) || 12;
 
