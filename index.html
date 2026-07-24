@@ -4,6 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Àpatrack</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg" />
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <link rel="stylesheet" href="styles.css" />
 
@@ -11,7 +12,10 @@
 <body>
 
 <div id="login-view" class="wrap">
-  <h1 data-i18n="appTitle">Àpatrack</h1>
+  <div class="brand">
+    <img src="favicon.svg" alt="" class="brand-icon" />
+    <h1 data-i18n="appTitle">Àpatrack</h1>
+  </div>
   <p data-i18n="appTagline">Registra els teus àpats i sabrem què millorar.</p>
   <div class="card" style="text-align:left">
     <label for="email" data-i18n="emailLabel">Correu electrònic</label>
@@ -23,9 +27,12 @@
 
 <div id="app-view" class="wrap hidden">
   <header class="app-header">
-    <div>
-      <h1 data-i18n="appTitle">Àpatrack</h1>
-      <div class="user-email" id="user-email"></div>
+    <div class="brand">
+      <img src="favicon.svg" alt="" class="brand-icon" />
+      <div>
+        <h1 data-i18n="appTitle">Àpatrack</h1>
+        <div class="user-email" id="user-email"></div>
+      </div>
     </div>
     <div style="display:flex; gap:8px;">
       <button class="secondary" id="settings-btn" data-i18n="settingsBtn">⚙️ Perfil</button>
