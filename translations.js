@@ -68,6 +68,7 @@ const I18N = {
     statAvgFasting: 'dejuni mitjà',
     fastingTitle: 'Dejuni: sopar → esmorzar',
     fastingGoalChartPrefix: 'objectiu',
+    sinceLastMealLabel: 'des del darrer àpat',
     fastingEmpty: 'Encara no hi ha prou dades (calen un sopar i un esmorzar registrats seguits).',
     weightChartTitle: 'Evolució del pes',
     weightChartEmpty: "Calen almenys dues lectures de pes per veure l'evolució.",
